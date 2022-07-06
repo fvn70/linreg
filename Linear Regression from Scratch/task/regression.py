@@ -1,3 +1,4 @@
+import math
 import numpy as np
 import pandas as pd
 
@@ -10,30 +11,42 @@ class CustomLinearRegression:
         self.intercept = 0.0
 
     def fit(self, X, y):
+        if self.fit_intercept:
+            I = pd.Series(1, index=X.index)
+            X.insert(loc=0, column="I", value=I)
         X = X.to_numpy()
         y = y.to_numpy()
-        if self.fit_intercept:
-            X = np.matrix([[1, i] for i in X])
         Xt = X.T
         beta = np.linalg.inv(Xt @ X) @ Xt @ y
         self.coefficient = beta
         if self.fit_intercept:
-            self.intercept = beta[0, 0]
-            self.coefficient = beta[0, 1]
+            self.intercept = beta[0]
+            self.coefficient = beta[1:]
 
     def predict(self, X):
         X = X.to_numpy()
-        y = X @ self.coefficient
+        y = self.intercept + X @ self.coefficient
         return y
 
+    def rmse(self, y, yhat):
+        n = y.shape[0]
+        return np.sqrt(np.sum((y - yhat)**2) / n)
 
-dic = {'x': [4, 4.5, 5, 5.5, 6, 6.5, 7],
-       'w': [1, -3, 2, 5, 0, 3, 6],
-       'z': [11, 15, 12, 9, 18, 13, 16],
-       'y': [33, 42, 45, 51, 53, 61, 62]}
+    def r2_score(self, y, yhat):
+        return 1 - np.sum((y - yhat)**2) / np.sum((y - y.mean())**2)
+
+
+dic = {'x': [0.9, 0.5, 1.75, 2.0, 1.4, 1.5, 3.0, 1.1, 2.6, 1.9],
+       'w': [11, 11, 9, 8, 7, 7, 6, 5, 5, 4],
+       'y': [21.95, 27.18, 16.9, 15.37, 16.03, 18.15, 14.22, 18.72, 15.4, 14.69]}
 df = pd.DataFrame(dic)
 
-regCustom = CustomLinearRegression(fit_intercept=False)
-regCustom.fit(df[['x', 'w', 'z']], df['y'])
-y_pred = regCustom.predict(df[['x', 'w', 'z']])
-print(y_pred)
+reg = CustomLinearRegression()
+reg.fit(df[['x', 'w']], df['y'])
+y_pred = reg.predict(df[['x', 'w']])
+rmse = reg.rmse(df['y'], y_pred)
+r2 = reg.r2_score(df['y'], y_pred)
+
+rez = {'Intercept': reg.intercept, 'Coefficient': reg.coefficient, 'R2': r2, 'RMSE': rmse}
+print(rez)
+
